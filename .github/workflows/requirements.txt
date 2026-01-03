@@ -1,0 +1,5 @@
+python-telegram-bot==20.7
+deepseek-api
+python-dotenv
+aiohttp
+cachetools
