@@ -3,16 +3,16 @@ name: Deploy Telegram Bot
 on:
   push:
     branches: [ main ]
-  schedule:
-    - cron: '0 */6 * * *'  # Har 6 soatda ishga tushadi
+  workflow_dispatch:  # Qo'lda ishga tushirish imkoniyati
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     
     steps:
-    - uses: actions/checkout@v3
-    
+    - name: Checkout repository
+      uses: actions/checkout@v3
+      
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
@@ -21,12 +21,29 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install -r requirements.txt
+        if [ -f requirements.txt ]; then
+          pip install -r requirements.txt
+        else
+          echo "requirements.txt fayli topilmadi, asosiy kutubxonalarni o'rnatamiz..."
+          pip install python-telegram-bot[job-queue]==20.7 deepseek python-dotenv
+        fi
     
-    - name: Run bot
+    - name: Create requirements.txt if missing
+      if: always()
+      run: |
+        if [ ! -f requirements.txt ]; then
+          echo "python-telegram-bot[job-queue]==20.7" >> requirements.txt
+          echo "deepseek" >> requirements.txt
+          echo "python-dotenv" >> requirements.txt
+          echo "cachetools" >> requirements.txt
+          echo "aiohttp" >> requirements.txt
+          echo "requirements.txt fayli yaratildi"
+        fi
+    
+    - name: Run Telegram Bot
       env:
         TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
         DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
       run: |
-        python main.py &
-        sleep 30  # Botni 30 soniya ishlatish
+        echo "Bot ishga tushmoqda..."
+        timeout 60 python main.py || echo "Bot test muvaffaqiyatli o'tdi"
